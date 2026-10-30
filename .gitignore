@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environment
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Dataset
+data/raw/
+data/processed/
+
+# Captured original photographs
+# Keep captured folders in the repository if required for submission.
+
+# Model checkpoints
+models/checkpoints/
+
+# Generated outputs
+outputs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
