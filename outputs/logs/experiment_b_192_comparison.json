@@ -1,0 +1,16 @@
+{
+    "experiment": "Experiment B - 192x192",
+    "model_path": "/home/mayu/Documents/Assignments/swiftmask-ces/models/final/swiftmask_fcn_192.pt",
+    "input_resolution": 192,
+    "threshold": 0.5,
+    "num_images": 1056,
+    "object_iou": 0.5856498606933841,
+    "background_iou": 0.810137067086864,
+    "miou": 0.697893463890124,
+    "boundary_f1": 0.3535287723579453,
+    "quality_score": 0.5945840564304703,
+    "average_cpu_ms": 6.800219758522742,
+    "total_cpu_seconds": 7.181032065000015,
+    "model_size_bytes": 86821,
+    "ces_score": 0.5771800739306152
+}

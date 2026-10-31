@@ -1,0 +1,918 @@
+
+================================================================================
+FILE: src/ces/config.py
+================================================================================
+
+from pathlib import Path
+
+
+# ============================================================
+# PROJECT PATHS
+# ============================================================
+
+ROOT_DIR = Path(__file__).resolve().parents[2]
+
+DATA_DIR = ROOT_DIR / "data"
+RAW_DATA_DIR = DATA_DIR / "raw" / "DUTS"
+PROCESSED_DATA_DIR = DATA_DIR / "processed" / "DUTS"
+SPLIT_DIR = DATA_DIR / "splits"
+
+CAPTURED_DIR = ROOT_DIR / "captured"
+
+MODEL_DIR = ROOT_DIR / "models"
+CHECKPOINT_DIR = MODEL_DIR / "checkpoints"
+FINAL_MODEL_DIR = MODEL_DIR / "final"
+
+OUTPUT_DIR = ROOT_DIR / "outputs"
+PREDICTION_DIR = OUTPUT_DIR / "predictions"
+VISUALIZATION_DIR = OUTPUT_DIR / "visualizations"
+LOG_DIR = OUTPUT_DIR / "logs"
+
+REPORT_DIR = ROOT_DIR / "reports"
+
+
+# ============================================================
+# DATASET CONFIGURATION
+# ============================================================
+
+IMAGE_SIZE = 256
+
+# Selected model: Experiment A (128 x 128).
+# Input images are resized to this resolution during inference.
+MODEL_INPUT_SIZE = 128
+
+# Ground-truth masks are binarized using pixel values >= 128.
+MASK_THRESHOLD = 128
+
+TRAIN_RATIO = 0.90
+
+RANDOM_SEED = 42
+
+
+# ============================================================
+# MODEL CONFIGURATION
+# ============================================================
+
+INPUT_CHANNELS = 3
+OUTPUT_CHANNELS = 1
+
+BASE_CHANNELS = 16
+
+# Bilinear interpolation is used for decoder upsampling.
+ALIGN_CORNERS = False
+
+
+# ============================================================
+# TRAINING CONFIGURATION
+# ============================================================
+
+BATCH_SIZE = 16
+
+EPOCHS = 40
+
+LEARNING_RATE = 1e-3
+
+WEIGHT_DECAY = 1e-5
+
+NUM_WORKERS = 2
+
+USE_DICE_LOSS = True
+
+DICE_WEIGHT = 0.5
+
+CHECKPOINT_INTERVAL = 5
+
+
+# ============================================================
+# INFERENCE CONFIGURATION
+# ============================================================
+
+# Binary prediction threshold applied after sigmoid.
+THRESHOLD = 0.50
+
+# CPU-only inference with one thread.
+CPU_THREADS = 1
+
+WARMUP_RUNS = 1
+
+BENCHMARK_RUNS = 20
+
+MAX_CPU_TIME_MS = 50.0
+
+MAX_MODEL_SIZE_BYTES = 4 * 1024 * 1024
+
+
+# ============================================================
+# EVALUATION CONFIGURATION
+# ============================================================
+
+BOUNDARY_TOLERANCE = 2
+
+IOU_OBJECT_WEIGHT = 0.5
+IOU_BACKGROUND_WEIGHT = 0.5
+
+QUALITY_IOU_WEIGHT = 0.70
+QUALITY_BOUNDARY_WEIGHT = 0.30
+
+
+# ============================================================
+# MODEL FILE
+# ============================================================
+
+# Official selected model.
+FINAL_MODEL_PATH = FINAL_MODEL_DIR / "swiftmask_fcn.pt"
+
+
+# ============================================================
+# RANDOM SEED
+# ============================================================
+
+def set_random_seed(seed=RANDOM_SEED):
+    import random
+    import numpy as np
+    import torch
+
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+
+
+================================================================================
+FILE: src/ces/data_loader.py
+================================================================================
+import os
+
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+
+import cv2
+import numpy as np
+import torch
+
+from torch.utils.data import Dataset
+
+from ces.config import (
+    MODEL_INPUT_SIZE,
+    MASK_THRESHOLD
+)
+
+
+class DUTSDataset(Dataset):
+    """
+    DUTS binary foreground segmentation dataset.
+
+    Expected structure:
+
+    root/
+        images/
+            image1.png
+        masks/
+            image1.png
+    """
+
+    def __init__(
+        self,
+        root,
+        image_size=MODEL_INPUT_SIZE
+    ):
+
+        self.root = root
+        self.image_size = image_size
+
+        self.image_dir = os.path.join(root, "images")
+        self.mask_dir = os.path.join(root, "masks")
+
+        if not os.path.isdir(self.image_dir):
+            raise FileNotFoundError(self.image_dir)
+
+        if not os.path.isdir(self.mask_dir):
+            raise FileNotFoundError(self.mask_dir)
+
+        self.image_names = sorted(
+            name for name in os.listdir(self.image_dir)
+            if name.lower().endswith(
+                (".png", ".jpg", ".jpeg")
+            )
+        )
+
+        if not self.image_names:
+            raise RuntimeError("No images found.")
+
+        self.samples = []
+
+        for name in self.image_names:
+
+            image_path = os.path.join(
+                self.image_dir,
+                name
+            )
+
+            mask_name = os.path.splitext(name)[0] + ".png"
+
+            mask_path = os.path.join(
+                self.mask_dir,
+                mask_name
+            )
+
+            if os.path.isfile(mask_path):
+                self.samples.append(
+                    (image_path, mask_path)
+                )
+
+        if not self.samples:
+            raise RuntimeError(
+                "No matching image-mask pairs found."
+            )
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, index):
+
+        image_path, mask_path = self.samples[index]
+
+        image = cv2.imread(
+            image_path,
+            cv2.IMREAD_COLOR
+        )
+
+        mask = cv2.imread(
+            mask_path,
+            cv2.IMREAD_GRAYSCALE
+        )
+
+        if image is None:
+            raise RuntimeError(
+                f"Unable to read image: {image_path}"
+            )
+
+        if mask is None:
+            raise RuntimeError(
+                f"Unable to read mask: {mask_path}"
+            )
+
+        image = cv2.resize(
+            image,
+            (self.image_size, self.image_size),
+            interpolation=cv2.INTER_AREA
+        )
+
+        mask = cv2.resize(
+            mask,
+            (self.image_size, self.image_size),
+            interpolation=cv2.INTER_NEAREST
+        )
+
+        image = cv2.cvtColor(
+            image,
+            cv2.COLOR_BGR2RGB
+        )
+
+        image = image.astype(
+            np.float32
+        ) / 255.0
+
+        mask = (
+            mask >= MASK_THRESHOLD
+        ).astype(np.float32)
+
+        image = np.transpose(
+            image,
+            (2, 0, 1)
+        )
+
+        mask = mask[np.newaxis, :, :]
+
+        image_tensor = torch.from_numpy(
+            np.ascontiguousarray(image)
+        )
+
+        mask_tensor = torch.from_numpy(
+            np.ascontiguousarray(mask)
+        )
+
+        return image_tensor, mask_tensor
+
+================================================================================
+FILE: scripts/train.py
+================================================================================
+
+import os
+import sys
+import json
+import time
+from pathlib import Path
+
+# ============================================================
+# 1. ENVIRONMENT CONFIGURATION
+# ============================================================
+
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+
+# ============================================================
+# 2. REPOSITORY ROOT
+# ============================================================
+
+ROOT_DIR = Path(__file__).resolve().parents[1]
+
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+# ============================================================
+# 3. IMPORTS
+# ============================================================
+
+import cv2
+import torch
+from torch.utils.data import DataLoader
+
+from ces.config import (
+    PROCESSED_DATA_DIR,
+    MODEL_INPUT_SIZE,
+    BATCH_SIZE,
+    EPOCHS,
+    LEARNING_RATE,
+    WEIGHT_DECAY,
+    NUM_WORKERS,
+    CPU_THREADS,
+    RANDOM_SEED,
+    CHECKPOINT_INTERVAL,
+    set_random_seed,
+)
+
+from ces.data_loader import DUTSDataset
+
+from ces.methods.track_b import (
+    SwiftMaskFCN,
+    SegmentationLoss,
+    count_parameters,
+)
+
+# ============================================================
+# 4. EXPERIMENT B OUTPUT PATHS
+# ============================================================
+
+EXPERIMENT_NAME = "experiment_b_192"
+
+BEST_MODEL_PATH = (
+    ROOT_DIR / "models" / "final" / "swiftmask_fcn_192.pt"
+)
+
+CHECKPOINT_DIR = (
+    ROOT_DIR / "models" / "checkpoints" / EXPERIMENT_NAME
+)
+
+LOG_DIR = ROOT_DIR / "outputs" / "logs"
+
+HISTORY_PATH = LOG_DIR / "training_history_192.json"
+
+# ============================================================
+# 5. DEVICE AND THREAD CONFIGURATION
+# ============================================================
+
+cv2.setNumThreads(1)
+torch.set_num_threads(CPU_THREADS)
+
+
+def get_device():
+    """Select CUDA GPU when available."""
+
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        print("CUDA device:", torch.cuda.get_device_name(0))
+        print(
+            "GPU memory:",
+            round(
+                torch.cuda.get_device_properties(0).total_memory
+                / (1024 ** 3),
+                2,
+            ),
+            "GB",
+        )
+    else:
+        device = torch.device("cpu")
+        print("CUDA unavailable. Using CPU.")
+
+    return device
+
+
+# ============================================================
+# 6. DATASET AND DATALOADER
+# ============================================================
+
+def create_dataloaders():
+
+    train_dataset = DUTSDataset(
+        root=PROCESSED_DATA_DIR / "train",
+        image_size=MODEL_INPUT_SIZE,
+    )
+
+    val_dataset = DUTSDataset(
+        root=PROCESSED_DATA_DIR / "val",
+        image_size=MODEL_INPUT_SIZE,
+    )
+
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=BATCH_SIZE,
+        shuffle=True,
+        num_workers=NUM_WORKERS,
+        pin_memory=torch.cuda.is_available(),
+        persistent_workers=(NUM_WORKERS > 0),
+        drop_last=False,
+    )
+
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=BATCH_SIZE,
+        shuffle=False,
+        num_workers=NUM_WORKERS,
+        pin_memory=torch.cuda.is_available(),
+        persistent_workers=(NUM_WORKERS > 0),
+        drop_last=False,
+    )
+
+    print("\nDataset information")
+    print("-------------------")
+    print("Training samples:", len(train_dataset))
+    print("Validation samples:", len(val_dataset))
+    print("Batch size:", BATCH_SIZE)
+    print("Input resolution:", MODEL_INPUT_SIZE)
+
+    return train_loader, val_loader
+
+
+# ============================================================
+# 7. TRAINING FUNCTION
+# ============================================================
+
+def train_one_epoch(model, loader, criterion, optimizer, device):
+
+    model.train()
+
+    running_loss = 0.0
+    total_samples = 0
+
+    for batch_index, (images, masks) in enumerate(loader):
+
+        images = images.to(device, non_blocking=True)
+        masks = masks.to(device, non_blocking=True)
+
+        optimizer.zero_grad(set_to_none=True)
+
+        logits = model(images)
+
+        loss = criterion(logits, masks)
+
+        loss.backward()
+
+        optimizer.step()
+
+        batch_size = images.size(0)
+
+        running_loss += loss.item() * batch_size
+        total_samples += batch_size
+
+        if (batch_index + 1) % 100 == 0:
+            print(
+                f"    Batch {batch_index + 1}/{len(loader)}"
+                f" | Loss: {loss.item():.5f}"
+            )
+
+    epoch_loss = running_loss / max(total_samples, 1)
+
+    return epoch_loss
+
+
+# ============================================================
+# 8. VALIDATION FUNCTION
+# ============================================================
+
+@torch.no_grad()
+def validate(model, loader, criterion, device):
+
+    model.eval()
+
+    running_loss = 0.0
+    total_samples = 0
+
+    for images, masks in loader:
+
+        images = images.to(device, non_blocking=True)
+        masks = masks.to(device, non_blocking=True)
+
+        logits = model(images)
+
+        loss = criterion(logits, masks)
+
+        batch_size = images.size(0)
+
+        running_loss += loss.item() * batch_size
+        total_samples += batch_size
+
+    validation_loss = running_loss / max(total_samples, 1)
+
+    return validation_loss
+
+
+# ============================================================
+# 9. MODEL SAVING
+# ============================================================
+
+def save_model(model, output_path):
+
+    output_path = Path(output_path)
+
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    torch.save(
+        model.state_dict(),
+        output_path,
+    )
+
+
+# ============================================================
+# 10. TRAINING PIPELINE
+# ============================================================
+
+def main():
+
+    print("=" * 65)
+    print("SWIFTMASK - EXPERIMENT B: 192x192 FCN TRAINING")
+    print("=" * 65)
+
+    # Prevent accidentally training with the baseline resolution.
+    if MODEL_INPUT_SIZE != 192:
+        raise ValueError(
+            f"Experiment B requires MODEL_INPUT_SIZE=192, "
+            f"but config.py currently has {MODEL_INPUT_SIZE}."
+        )
+
+    set_random_seed(RANDOM_SEED)
+
+    device = get_device()
+
+    # Create output directories.
+    BEST_MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+    print("\nExperiment configuration")
+    print("------------------------")
+    print("Experiment:", EXPERIMENT_NAME)
+    print("Input resolution:", MODEL_INPUT_SIZE)
+    print("Epochs:", EPOCHS)
+    print("Batch size:", BATCH_SIZE)
+    print("Learning rate:", LEARNING_RATE)
+    print("Weight decay:", WEIGHT_DECAY)
+    print("Random seed:", RANDOM_SEED)
+    print("Best model output:", BEST_MODEL_PATH)
+    print("History output:", HISTORY_PATH)
+
+    train_loader, val_loader = create_dataloaders()
+
+    # --------------------------------------------------------
+    # Model
+    # --------------------------------------------------------
+
+    model = SwiftMaskFCN().to(device)
+
+    print("\nModel information")
+    print("-----------------")
+    print("Architecture: SwiftMaskFCN")
+    print("Trainable parameters:", count_parameters(model))
+    print("Device:", device)
+
+    # --------------------------------------------------------
+    # Loss
+    # --------------------------------------------------------
+
+    criterion = SegmentationLoss()
+
+    # --------------------------------------------------------
+    # Optimizer
+    # --------------------------------------------------------
+
+    optimizer = torch.optim.AdamW(
+        model.parameters(),
+        lr=LEARNING_RATE,
+        weight_decay=WEIGHT_DECAY,
+    )
+
+    # --------------------------------------------------------
+    # Training history
+    # --------------------------------------------------------
+
+    history = []
+
+    best_validation_loss = float("inf")
+    best_epoch = 0
+
+    # --------------------------------------------------------
+    # Training loop
+    # --------------------------------------------------------
+
+    print("\nStarting Experiment B training")
+    print("=" * 65)
+
+    training_start = time.perf_counter()
+
+    for epoch in range(1, EPOCHS + 1):
+
+        epoch_start = time.perf_counter()
+
+        print(f"\nEpoch {epoch}/{EPOCHS}")
+        print("-" * 65)
+
+        train_loss = train_one_epoch(
+            model,
+            train_loader,
+            criterion,
+            optimizer,
+            device,
+        )
+
+        val_loss = validate(
+            model,
+            val_loader,
+            criterion,
+            device,
+        )
+
+        epoch_time = time.perf_counter() - epoch_start
+
+        print("\nEpoch results")
+        print("-------------")
+        print(f"Training loss:   {train_loss:.6f}")
+        print(f"Validation loss: {val_loss:.6f}")
+        print(f"Epoch time:      {epoch_time:.2f} seconds")
+
+        # ----------------------------------------------------
+        # Save best model using validation loss
+        # ----------------------------------------------------
+
+        if val_loss < best_validation_loss:
+
+            best_validation_loss = val_loss
+            best_epoch = epoch
+
+            save_model(
+                model,
+                BEST_MODEL_PATH,
+            )
+
+            print("\nNew best Experiment B model saved!")
+            print("Path:", BEST_MODEL_PATH)
+
+        # ----------------------------------------------------
+        # Periodic checkpoints
+        # ----------------------------------------------------
+
+        if epoch % CHECKPOINT_INTERVAL == 0:
+
+            checkpoint_path = (
+                CHECKPOINT_DIR / f"epoch_{epoch:03d}.pt"
+            )
+
+            save_model(
+                model,
+                checkpoint_path,
+            )
+
+            print(
+                "Checkpoint saved:",
+                checkpoint_path.name,
+            )
+
+        # ----------------------------------------------------
+        # Save training history after every epoch
+        # ----------------------------------------------------
+
+        history.append(
+            {
+                "experiment": EXPERIMENT_NAME,
+                "input_resolution": MODEL_INPUT_SIZE,
+                "epoch": epoch,
+                "train_loss": train_loss,
+                "validation_loss": val_loss,
+                "epoch_time_seconds": epoch_time,
+                "learning_rate": optimizer.param_groups[0]["lr"],
+                "batch_size": BATCH_SIZE,
+            }
+        )
+
+        with open(
+            HISTORY_PATH,
+            "w",
+            encoding="utf-8",
+        ) as file:
+
+            json.dump(
+                history,
+                file,
+                indent=4,
+            )
+
+    total_training_time = time.perf_counter() - training_start
+
+    # ========================================================
+    # FINAL SUMMARY
+    # ========================================================
+
+    print("\n" + "=" * 65)
+    print("EXPERIMENT B TRAINING COMPLETED")
+    print("=" * 65)
+
+    print("Experiment:", EXPERIMENT_NAME)
+    print("Input resolution:", MODEL_INPUT_SIZE)
+    print("Best epoch:", best_epoch)
+
+    print(
+        f"Best validation loss: "
+        f"{best_validation_loss:.6f}"
+    )
+
+    print(
+        f"Total training time: "
+        f"{total_training_time / 60:.2f} minutes"
+    )
+
+    print("Best model:", BEST_MODEL_PATH)
+    print("Training history:", HISTORY_PATH)
+    print("Checkpoint directory:", CHECKPOINT_DIR)
+
+    print(
+        "Model parameter count:",
+        count_parameters(model),
+    )
+
+    if BEST_MODEL_PATH.exists():
+        print(
+            "Best model size:",
+            BEST_MODEL_PATH.stat().st_size,
+            "bytes",
+        )
+
+    print("=" * 65)
+
+
+# ============================================================
+# 11. ENTRY POINT
+# ============================================================
+
+if __name__ == "__main__":
+    main()
+
+
+================================================================================
+FILE: src/ces/methods/track_b/losses.py
+================================================================================
+
+import torch
+import torch.nn as nn
+
+from ces.config import DICE_WEIGHT
+
+
+class SoftDiceLoss(nn.Module):
+    """
+    Soft Dice loss for binary segmentation.
+
+    Dice coefficient:
+
+        Dice = (2 * intersection + smooth) /
+               (sum(prediction) + sum(target) + smooth)
+
+    Loss = 1 - Dice
+    """
+
+    def __init__(self, smooth=1.0):
+        super().__init__()
+
+        self.smooth = smooth
+
+    def forward(self, logits, targets):
+
+        probabilities = torch.sigmoid(logits)
+
+        probabilities = probabilities.reshape(
+            probabilities.shape[0],
+            -1
+        )
+
+        targets = targets.reshape(
+            targets.shape[0],
+            -1
+        )
+
+        intersection = (
+            probabilities * targets
+        ).sum(dim=1)
+
+        denominator = (
+            probabilities.sum(dim=1)
+            + targets.sum(dim=1)
+        )
+
+        dice_score = (
+            2.0 * intersection + self.smooth
+        ) / (
+            denominator + self.smooth
+        )
+
+        dice_loss = 1.0 - dice_score
+
+        return dice_loss.mean()
+
+
+class SegmentationLoss(nn.Module):
+    """
+    Combined BCE and Soft Dice loss.
+
+    Total loss:
+
+        L = (1 - alpha) * BCE + alpha * DiceLoss
+    """
+
+    def __init__(self, dice_weight=DICE_WEIGHT):
+        super().__init__()
+
+        if not 0.0 <= dice_weight <= 1.0:
+            raise ValueError(
+                "dice_weight must be between 0 and 1."
+            )
+
+        self.dice_weight = dice_weight
+
+        self.bce = nn.BCEWithLogitsLoss()
+
+        self.dice = SoftDiceLoss()
+
+    def forward(self, logits, targets):
+
+        bce_loss = self.bce(
+            logits,
+            targets
+        )
+
+        dice_loss = self.dice(
+            logits,
+            targets
+        )
+
+        total_loss = (
+            (1.0 - self.dice_weight) * bce_loss
+            + self.dice_weight * dice_loss
+        )
+
+        return total_loss
+
+
+================================================================================
+FILE: pyproject.toml
+================================================================================
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "swiftmask-ces"
+version = "1.0.0"
+description = "Compute-efficient foreground segmentation using a lightweight FCN"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "numpy",
+    "opencv-python",
+    "matplotlib",
+    "torch==2.12.1"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.uv]
+package = true
+
+[[tool.uv.index]]
+name = "pytorch-cu132"
+url = "https://download.pytorch.org/whl/cu132"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu132" }

@@ -1,0 +1,110 @@
+{
+    "dataset": "Captured Phone Photographs",
+    "num_images": 10,
+    "checkpoint": "/home/mayu/Documents/Assignments/swiftmask-ces/models/final/swiftmask_u2_v2.pt",
+    "device": "CPU",
+    "cpu_threads": 1,
+    "average_cpu_time_ms": 20.741571000000004,
+    "model_size_bytes": 474919,
+    "object_iou": 0.0,
+    "background_iou": 0.813031005859375,
+    "miou": 0.4065155029296875,
+    "boundary_f1": 0.0,
+    "quality_q": 0.28456085205078124,
+    "ces": {
+        "quality_score": 0.28456085205078124,
+        "ces_score": 0.2577298269098065
+    },
+    "confusion_matrix": [
+        [
+            532828,
+            122532
+        ],
+        [
+            0,
+            0
+        ]
+    ],
+    "per_image_results": [
+        {
+            "image": "img1.png",
+            "object_iou": 0.0,
+            "background_iou": 0.94146728515625,
+            "miou": 0.470733642578125,
+            "boundary_f1": 0.0,
+            "cpu_time_ms": 21.62701999999994
+        },
+        {
+            "image": "img10.png",
+            "object_iou": 0.0,
+            "background_iou": 0.675048828125,
+            "miou": 0.3375244140625,
+            "boundary_f1": 0.0,
+            "cpu_time_ms": 23.153619000000127
+        },
+        {
+            "image": "img2.png",
+            "object_iou": 0.0,
+            "background_iou": 0.89263916015625,
+            "miou": 0.446319580078125,
+            "boundary_f1": 0.0,
+            "cpu_time_ms": 19.728521
+        },
+        {
+            "image": "img3.png",
+            "object_iou": 0.0,
+            "background_iou": 0.83563232421875,
+            "miou": 0.417816162109375,
+            "boundary_f1": 0.0,
+            "cpu_time_ms": 19.996325000000148
+        },
+        {
+            "image": "img4.png",
+            "object_iou": 0.0,
+            "background_iou": 0.71112060546875,
+            "miou": 0.355560302734375,
+            "boundary_f1": 0.0,
+            "cpu_time_ms": 18.880290999999882
+        },
+        {
+            "image": "img5.png",
+            "object_iou": 0.0,
+            "background_iou": 0.5784912109375,
+            "miou": 0.28924560546875,
+            "boundary_f1": 0.0,
+            "cpu_time_ms": 19.42746200000012
+        },
+        {
+            "image": "img6.png",
+            "object_iou": 0.0,
+            "background_iou": 0.987548828125,
+            "miou": 0.4937744140625,
+            "boundary_f1": 0.0,
+            "cpu_time_ms": 19.873883000000035
+        },
+        {
+            "image": "img7.png",
+            "object_iou": 0.0,
+            "background_iou": 0.7879638671875,
+            "miou": 0.39398193359375,
+            "boundary_f1": 0.0,
+            "cpu_time_ms": 24.151465999999957
+        },
+        {
+            "image": "img8.png",
+            "object_iou": 0.0,
+            "background_iou": 0.97900390625,
+            "miou": 0.489501953125,
+            "boundary_f1": 0.0,
+            "cpu_time_ms": 19.979397999999815
+        },
+        {
+            "image": "img9.png",
+            "object_iou": 0.0,
+            "background_iou": 0.74139404296875,
+            "miou": 0.370697021484375,
+            "boundary_f1": 0.0,
+            "cpu_time_ms": 20.59772500000001
+        }
+    ]
+}

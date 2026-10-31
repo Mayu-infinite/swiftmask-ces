@@ -1,0 +1,91 @@
+{
+    "model": "models/final/swiftmask_fcn.pt",
+    "input_resolution": 128,
+    "threshold": 0.5,
+    "device": "CPU",
+    "num_images": 10,
+    "ground_truth_masks_used": false,
+    "evaluation_type": "qualitative real-world inference",
+    "results": [
+        {
+            "image": "img1.png",
+            "prediction": "outputs/captured/predictions/img1_mask.png",
+            "overlay": "outputs/captured/overlays/img1_overlay.png",
+            "comparison": "outputs/captured/comparisons/img1_comparison.png",
+            "foreground_pixels": 15696,
+            "foreground_percentage": 23.9502
+        },
+        {
+            "image": "img10.png",
+            "prediction": "outputs/captured/predictions/img10_mask.png",
+            "overlay": "outputs/captured/overlays/img10_overlay.png",
+            "comparison": "outputs/captured/comparisons/img10_comparison.png",
+            "foreground_pixels": 24336,
+            "foreground_percentage": 37.1338
+        },
+        {
+            "image": "img2.png",
+            "prediction": "outputs/captured/predictions/img2_mask.png",
+            "overlay": "outputs/captured/overlays/img2_overlay.png",
+            "comparison": "outputs/captured/comparisons/img2_comparison.png",
+            "foreground_pixels": 8252,
+            "foreground_percentage": 12.5916
+        },
+        {
+            "image": "img3.png",
+            "prediction": "outputs/captured/predictions/img3_mask.png",
+            "overlay": "outputs/captured/overlays/img3_overlay.png",
+            "comparison": "outputs/captured/comparisons/img3_comparison.png",
+            "foreground_pixels": 17552,
+            "foreground_percentage": 26.7822
+        },
+        {
+            "image": "img4.png",
+            "prediction": "outputs/captured/predictions/img4_mask.png",
+            "overlay": "outputs/captured/overlays/img4_overlay.png",
+            "comparison": "outputs/captured/comparisons/img4_comparison.png",
+            "foreground_pixels": 19012,
+            "foreground_percentage": 29.01
+        },
+        {
+            "image": "img5.png",
+            "prediction": "outputs/captured/predictions/img5_mask.png",
+            "overlay": "outputs/captured/overlays/img5_overlay.png",
+            "comparison": "outputs/captured/comparisons/img5_comparison.png",
+            "foreground_pixels": 26784,
+            "foreground_percentage": 40.8691
+        },
+        {
+            "image": "img6.png",
+            "prediction": "outputs/captured/predictions/img6_mask.png",
+            "overlay": "outputs/captured/overlays/img6_overlay.png",
+            "comparison": "outputs/captured/comparisons/img6_comparison.png",
+            "foreground_pixels": 15880,
+            "foreground_percentage": 24.231
+        },
+        {
+            "image": "img7.png",
+            "prediction": "outputs/captured/predictions/img7_mask.png",
+            "overlay": "outputs/captured/overlays/img7_overlay.png",
+            "comparison": "outputs/captured/comparisons/img7_comparison.png",
+            "foreground_pixels": 20236,
+            "foreground_percentage": 30.8777
+        },
+        {
+            "image": "img8.png",
+            "prediction": "outputs/captured/predictions/img8_mask.png",
+            "overlay": "outputs/captured/overlays/img8_overlay.png",
+            "comparison": "outputs/captured/comparisons/img8_comparison.png",
+            "foreground_pixels": 10308,
+            "foreground_percentage": 15.7288
+        },
+        {
+            "image": "img9.png",
+            "prediction": "outputs/captured/predictions/img9_mask.png",
+            "overlay": "outputs/captured/overlays/img9_overlay.png",
+            "comparison": "outputs/captured/comparisons/img9_comparison.png",
+            "foreground_pixels": 17724,
+            "foreground_percentage": 27.0447
+        }
+    ]
+}

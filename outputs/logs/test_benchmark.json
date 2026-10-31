@@ -1,0 +1,29 @@
+{
+    "model": "swiftmask_u2_v2.pt",
+    "split": "test",
+    "num_images": 5019,
+    "input_resolution": 128,
+    "output_resolution": 256,
+    "threshold": 0.5,
+    "device": "CPU",
+    "cpu_threads": 1,
+    "total_cpu_seconds": 94.37032284799994,
+    "average_cpu_ms": 18.802614633990824,
+    "model_size_bytes": 474919,
+    "object_iou": 0.5081806356099671,
+    "background_iou": 0.8854581748215584,
+    "miou": 0.6968194052157628,
+    "boundary_f1": 0.4252703692267542,
+    "quality_score": 0.6153546944190602,
+    "ces_score": 0.5621059544420531,
+    "confusion_matrix": [
+        [
+            260427328,
+            19779996
+        ],
+        [
+            13908576,
+            34809284
+        ]
+    ]
+}

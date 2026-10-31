@@ -1,0 +1,62 @@
+{
+    "V1": {
+        "model": "V1",
+        "split": "validation",
+        "num_images": 1056,
+        "input_resolution": 128,
+        "output_resolution": 256,
+        "threshold": 0.5,
+        "device": "CPU",
+        "cpu_threads": 1,
+        "parameters": 13858,
+        "total_cpu_seconds": 14.216925847999997,
+        "average_cpu_ms": 13.46299796212121,
+        "model_size_bytes": 86501,
+        "object_iou": 0.417891864505968,
+        "background_iou": 0.7154785551316335,
+        "miou": 0.5666852098188008,
+        "boundary_f1": 0.1842620495261097,
+        "quality_score": 0.45195826173099346,
+        "ces_score": 0.4266873154460012,
+        "confusion_matrix": [
+            [
+                41117015,
+                9196163
+            ],
+            [
+                7154673,
+                11738165
+            ]
+        ]
+    },
+    "V2": {
+        "model": "V2",
+        "split": "validation",
+        "num_images": 1056,
+        "input_resolution": 128,
+        "output_resolution": 256,
+        "threshold": 0.5,
+        "device": "CPU",
+        "cpu_threads": 1,
+        "parameters": 62593,
+        "total_cpu_seconds": 21.242983204999984,
+        "average_cpu_ms": 20.116461368371198,
+        "model_size_bytes": 474919,
+        "object_iou": 0.7878801964924448,
+        "background_iou": 0.9152021237062057,
+        "miou": 0.8515411600993252,
+        "boundary_f1": 0.6119792973073254,
+        "quality_score": 0.7796726012617252,
+        "ces_score": 0.7081073913015339,
+        "confusion_matrix": [
+            [
+                48166632,
+                2146546
+            ],
+            [
+                2316324,
+                16576514
+            ]
+        ]
+    }
+}

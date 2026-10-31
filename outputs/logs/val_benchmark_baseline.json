@@ -1,0 +1,25 @@
+{
+    "split": "val",
+    "num_images": 1056,
+    "device": "CPU",
+    "cpu_threads": 1,
+    "total_cpu_seconds": 3.601055991999998,
+    "average_cpu_ms": 3.4100909015151495,
+    "model_size_bytes": 86501,
+    "object_iou": 0.6484869220322702,
+    "background_iou": 0.846594403795346,
+    "miou": 0.7475406629138082,
+    "boundary_f1": 0.4014721321055081,
+    "quality_score": 0.6437201036713182,
+    "ces_score": 0.633611954748479,
+    "confusion_matrix": [
+        [
+            45665623,
+            4647555
+        ],
+        [
+            3627201,
+            15265637
+        ]
+    ]
+}

@@ -1,34 +1,61 @@
-# Python
+
+# ============================================================
+# Python cache and compiled files
+# ============================================================
 __pycache__/
 *.py[cod]
 *.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
-# Virtual environment
+# ============================================================
+# Virtual environments
+# ============================================================
 .venv/
 venv/
 
+# ============================================================
 # IDE
+# ============================================================
 .vscode/
 .idea/
 
-# Dataset
+# ============================================================
+# Dataset - exclude large DUTS datasets
+# ============================================================
 data/raw/
 data/processed/
+data/splits/
 
-# Captured original photographs
-# Keep captured folders in the repository if required for submission.
+# ============================================================
+# Models
+# ============================================================
+# Keep all trained models and checkpoints.
+# models/checkpoints/ is intentionally NOT ignored.
 
-# Model checkpoints
-models/checkpoints/
+# ============================================================
+# Outputs and experiment results
+# ============================================================
+# Keep all evaluation results, logs, graphs and visualizations.
+# outputs/ is intentionally NOT ignored.
 
-# Generated outputs
-outputs/
-*.log
+# ============================================================
+# Captured photographs and annotations
+# ============================================================
+# Keep original photographs, resized images and ground-truth masks.
+# captured/ is intentionally NOT ignored.
 
-# OS
-.DS_Store
-Thumbs.db
-
+# ============================================================
 # Temporary files
+# ============================================================
 *.tmp
 *.bak
+*.swp
+*.log.tmp
+
+# ============================================================
+# OS files
+# ============================================================
+.DS_Store
+Thumbs.db
