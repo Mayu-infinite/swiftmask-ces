@@ -2,169 +2,409 @@
 
 ## Cost-Efficient Segmentation under a Compute Budget
 
-This project builds a compact foreground/background segmentation model optimized for the assignment constraints: low CPU inference time, small model size, and strong quality metrics. The final model is a lightweight U2-inspired residual architecture designed to balance segmentation precision with computational efficiency.
+**Course:** CSL7360 — Computer Vision, Assignment 2  
+**Track:** B — Fully Convolutional Network trained from scratch
 
-## Project overview
+SwiftMask-CES is a lightweight foreground/background segmentation system designed to balance segmentation quality, boundary accuracy, CPU inference time, and saved model size. The currently tracked implementation is a compact **U²-Net-inspired residual encoder–decoder** with depthwise-separable convolutions, skip connections, and a dilated multi-scale context block.
 
-- Final model checkpoint: [models/final/swiftmask_u2_v2.pt](models/final/swiftmask_u2_v2.pt)
-- Best validation threshold: 0.55
-- Trainable parameters: 43,689
-- Validation CES: 0.739036
-- Benchmark CES: 0.733409
-- Captured-image CES: 0.564096
+> **Version and benchmark note:** This README describes files currently tracked on `main`. The active checkpoint is `models/final/swiftmask_u2_v2.pt` (290,947 bytes), and the active inference threshold in `src/ces/config.py` is 0.55. The checked-in `outputs/logs/test_benchmark.json` is an older run (66.7893 ms/image and a 1,115,047-byte checkpoint); it does **not** describe the current checkpoint and does not satisfy the 50 ms requirement. A current-checkpoint DUTS-TE benchmark is still required before publishing an official final DUTS-TE CES.
 
-## Architecture
+## Contents
 
-The final architecture is a compact residual encoder-decoder network with depthwise separable convolutions, skip connections, and multi-scale context aggregation.
+1. [Objective and constraints](#1-objective-and-constraints)
+2. [Dataset and preprocessing](#2-dataset-and-preprocessing)
+3. [Network architecture](#3-network-architecture)
+4. [Training methodology](#4-training-methodology)
+5. [Evaluation protocol](#5-evaluation-protocol)
+6. [Validation and threshold selection](#6-validation-and-threshold-selection)
+7. [DUTS-TE benchmark status](#7-duts-te-benchmark-status)
+8. [Captured-photo evaluation](#8-captured-photo-evaluation)
+9. [Failure analysis](#9-failure-analysis)
+10. [Inference and reproduction](#10-inference-and-reproduction)
+11. [Repository structure](#11-repository-structure)
+
+---
+
+## 1. Objective and constraints
+
+For an input photograph, predict a binary mask that labels every pixel as either the main foreground object or background.
+
+- Foreground: 1 in memory and 255 in saved PNG masks.
+- Background: 0 in memory and 0 in saved PNG masks.
+- Average CPU process time: at most **50 ms/image**, measured on one CPU core.
+- Saved parameter file: at most **4 MiB = 4,194,304 bytes**.
+- Quality combines aggregate mIoU and mean per-image Boundary F1.
+- CES applies the assignment's latency and model-size penalties to Q.
+
+### Current tracked model
+
+| Property | Value |
+|---|---:|
+| Architecture | Compact U²-Net-inspired residual encoder–decoder |
+| Checkpoint | `models/final/swiftmask_u2_v2.pt` |
+| Trainable parameters | 43,689 |
+| CNN working resolution | 128 × 128 |
+| Output / metric resolution | 256 × 256 |
+| Inference threshold | **0.55** |
+| Checkpoint size | **290,947 bytes (0.277 MiB)** |
+| CPU threads | 1 |
+
+The architecture is U²-Net-inspired; it is a deliberately smaller custom network, not the full original U²-Net.
+
+## 2. Dataset and preprocessing
+
+### 2.1 DUTS split
+
+DUTS-TR supplies the training and validation examples. DUTS-TE is reserved for final evaluation and is not loaded by the training loop.
+
+| Split | Images | Purpose |
+|---|---:|---|
+| DUTS-TR | 10,553 | Training/validation source |
+| Training subset | 9,497 | Parameter optimization |
+| Validation subset | 1,056 | Model assessment and threshold selection |
+| DUTS-TE | 5,019 | Official test benchmark |
+
+The project uses a 90:10 training/validation split with random seed 42. Processed data is expected under `data/processed/DUTS/train` and `data/processed/DUTS/val`.
+
+### 2.2 Preprocessing
+
+The assignment specifies resizing photographs to **256 × 256** with OpenCV `INTER_AREA`, and masks to **256 × 256** with `INTER_NEAREST`. A mask pixel is foreground when its grayscale value is at least 128. Non-square images are directly resized to the square target, as required by the assignment.
+
+Training uses 128 × 128 model inputs to reduce computation. In inference, a 256 × 256 BGR image is converted to RGB, resized to 128 × 128, normalized to [0, 1], and converted to a tensor. The network output is thresholded and returned as a 256 × 256 binary mask.
+
+### 2.3 Training augmentation
+
+Augmentation is enabled for training and disabled for validation. Paired images and masks receive the same geometric transformations (flips and scale changes); image-only appearance transformations vary brightness/contrast and channel gains. Mask transformations use nearest-neighbour interpolation to preserve discrete labels.
+
+### 2.4 Captured photographs
+
+Ten phone photographs were collected around campus/hostel and annotated with LabelMe polygons. They cover everyday objects and varied scene conditions, including indoor/outdoor settings, different lighting, small and large objects, and clutter.
+
+The captured evaluation currently uses **nine aligned image/mask pairs**. **img2.png (the wall hanging/dreamcatcher image) is excluded** because its crop-to-mask alignment was not considered reliable. It is not included in captured metrics or the comparison-image gallery.
+
+Expected layout:
+
+```text
+captured/
+├── original/       # phone photographs and LabelMe JSON annotations
+├── images 256/     # 256 x 256 images
+└── masks 256/      # binary masks: background=0, foreground=255
+```
+
+Captured photographs are for testing only; they are not used for model training or threshold selection.
+
+## 3. Network architecture
+
+The active model is implemented in `src/ces/methods/track_b/model.py`.
+
+### 3.1 Depthwise-separable convolution
+
+Each block applies a 3 × 3 depthwise spatial convolution, batch normalization and ReLU, followed by a 1 × 1 pointwise channel-mixing convolution, batch normalization and ReLU. This reduces computation and parameter count compared with repeatedly using full dense 3 × 3 convolutions.
+
+### 3.2 Residual U-blocks
+
+Each RSU block projects its input to the required output width, extracts features through depthwise-separable convolutions, downsamples with max pooling, upsamples with bilinear interpolation, concatenates an encoder feature, and refines the fused representation. A projected residual is added to the decoded result.
+
+### 3.3 Encoder, context block and decoder
+
+| Stage | Channels | Purpose |
+|---|---:|---|
+| Encoder 1 | 16 | Fine spatial features |
+| Encoder 2 | 24 | Intermediate features |
+| Encoder 3 | 40 | Deeper semantic features |
+| Bottleneck | 56 | Multi-scale context |
+| Decoder 3 | 40 | Skip fusion with encoder 3 |
+| Decoder 2 | 24 | Skip fusion with encoder 2 |
+| Decoder 1 | 16 | Skip fusion with encoder 1 |
+| Output head | 1 | Foreground logits |
+
+The bottleneck has three parallel depthwise-separable branches with dilation rates **1, 2, and 4**. Their outputs are concatenated, projected, and combined with a residual projection. The decoder progressively upsamples and concatenates skip features from the encoder. A final 1 × 1 convolution produces the one-channel foreground logit map.
 
 ![SwiftMask-CES architecture](reports/figures/v2/architecture.svg)
 
-## Model explanation
+## 4. Training methodology
 
-The model follows a lightweight U2-style segmentation pattern, but with a much smaller footprint than a full large-capacity U-Net or FCN baseline. The design is intentionally compact to satisfy the assignment constraints while preserving strong segmentation quality.
+Training is implemented in `scripts/train_v2.py`. The active V2 checkpoint is trained from scratch on DUTS-TR; no pretrained segmentation weights or pretrained backbone are used.
 
-- Input stem: begins with a small convolutional front-end to extract low-level spatial features while keeping computation lightweight.
-- Residual blocks: repeated residual units preserve gradient flow and help the network learn meaningful object structure without exploding parameter count.
-- Depthwise separable convolutions: reduce the number of parameters and multiply-add operations compared with standard convolutions, making the model faster and smaller.
-- Skip connections: features from earlier encoder stages are fused with decoder representations to recover object boundaries and spatial detail.
-- Multi-scale context: the bottleneck aggregates information at multiple receptive-field scales, which improves the network's ability to segment foreground objects of varying sizes and shapes.
-- Decoder and mask head: progressively upsamples the compressed features, combines them with high-resolution spatial cues, and produces a final binary mask.
-- Thresholding: the final score map is converted to a binary mask using a fixed confidence threshold of 0.55 for deployment.
+| Hyperparameter | Value |
+|---|---:|
+| Epochs | 40 |
+| Input resolution | 128 × 128 |
+| Batch size | 16 |
+| Optimizer | AdamW |
+| Learning rate | 0.001 |
+| Weight decay | 0.00001 |
+| Loss | Binary cross-entropy + Soft Dice |
+| Augmentation | Training split only |
+| Random seed | 42 |
+| Device | CUDA when available |
 
-This architecture is a practical tradeoff: it keeps the network compact and efficient, while still capturing enough semantic and boundary information to produce strong CES and mIoU values on validation data.
+The training and validation history is stored in `outputs/logs/v2/training_history_v2.json`.
 
-## Final model summary
+### Training history and threshold sweep
 
-- Architecture: compact U2-inspired residual segmentation model
-- Input size: 256 x 256 RGB
-- Output: binary foreground mask
-- Final threshold: 0.55
-- Model size: 290,947 bytes
-- Average benchmark CPU time: 21.41 ms/image
+![Training history](reports/figures/v2/training_history.png)
 
-## Validation results
+![Threshold sweep](reports/figures/v2/threshold_sweep.png)
 
-### Best threshold selection
+## 5. Evaluation protocol
 
-The model was evaluated across a threshold sweep to select the best operating point.
+### 5.1 Timed inference
 
-| Threshold | mIoU | Boundary F1 | Quality Q | CES |
-|---|---:|---:|---:|---:|
+The timed function starts with a 256 × 256 BGR photograph already in memory and ends with a 256 × 256 binary prediction in memory. It includes colour conversion, resizing to model resolution, normalization, tensor construction, model forward pass, sigmoid/thresholding, and output materialization. Checkpoint loading, source-file I/O, original-file resizing, metric calculation, and visualization writing are outside the timed function.
+
+CPU evaluation configures one PyTorch and one OpenCV thread and performs a warm-up inference before timing. Average CPU time is measured using `time.process_time()`.
+
+### 5.2 Mean intersection over union
+
+A single dataset-level 2 × 2 confusion matrix is accumulated:
+
+```text
+IoU_fg = TP / (TP + FP + FN)
+IoU_bg = TN / (TN + FP + FN)
+mIoU   = (IoU_fg + IoU_bg) / 2
+```
+
+This is the average of foreground and background IoU computed from the aggregate confusion matrix.
+
+### 5.3 Boundary F1
+
+A boundary pixel is a foreground pixel with at least one background neighbour in its four-connected neighbourhood; pixels outside the image count as background. A predicted boundary pixel is considered matched if a ground-truth boundary pixel lies within its 5 × 5 neighbourhood. The reverse match gives recall. Precision and recall are combined using the harmonic mean. Boundary F1 is computed per image and then averaged.
+
+### 5.4 Quality and CES
+
+```text
+Q = 0.70 * mIoU + 0.30 * BoundaryF1
+
+CES = Q * [1 - 0.20 * (T_CPU / 50 ms)
+             - 0.10 * min(1, S_disk / 4 MiB)]
+```
+
+CES is zero when average CPU time exceeds 50 ms. The model-size term uses the exact serialized parameter-file size in bytes.
+
+## 6. Validation and threshold selection
+
+Six thresholds were compared on the **1,056-image validation split**. The threshold sweep selected the threshold with the highest validation CES estimate. The sweep uses a previously measured CPU reference of 20.116461 ms/image and the active checkpoint size of 290,947 bytes.
+
+| Threshold | mIoU | Boundary F1 | Q | CES |
+|---:|---:|---:|---:|---:|
 | 0.35 | 0.865410 | 0.658327 | 0.803285 | 0.733076 |
 | 0.40 | 0.867565 | 0.663406 | 0.806317 | 0.735843 |
 | 0.45 | 0.869058 | 0.666577 | 0.808314 | 0.737665 |
 | 0.50 | 0.870070 | 0.668304 | 0.809540 | 0.738785 |
-| 0.55 | 0.870597 | 0.667994 | 0.809816 | 0.739036 |
+| **0.55** | **0.870597** | **0.667994** | **0.809816** | **0.739036** |
 | 0.60 | 0.870559 | 0.665822 | 0.809138 | 0.738417 |
 
-### Best validation result
+**Selected validation threshold: 0.55.** The selected value is stored in `src/ces/config.py` and used by `src/ces/pipeline.py`.
 
-- mIoU: 0.870597
-- Boundary F1: 0.667994
-- Quality Q: 0.809816
-- CES: 0.739036
+The separate saved validation CPU benchmark (`outputs/logs/val_benchmark.json`) records 1,056 images, 21.4071 ms/image, 290,947 bytes, mIoU 0.869044, Boundary F1 0.666302, Q 0.808222, and CES 0.733409. That JSON records threshold 0.50, so it is a distinct benchmark record from the threshold-sweep best row above.
 
-### Validation benchmark
+## 7. DUTS-TE benchmark status
 
-Under single-thread CPU benchmark evaluation:
+The committed `outputs/logs/test_benchmark.json` is a **legacy benchmark artifact**, not a final result for the currently tracked checkpoint. It records:
 
-- Average CPU time: 21.41 ms/image
-- Model size: 290,947 bytes
-- mIoU: 0.869044
-- Boundary F1: 0.666302
-- CES: 0.733409
+| Field in legacy JSON | Value |
+|---|---:|
+| Threshold | 0.50 |
+| Average CPU time | 66.7893 ms/image |
+| Model size | 1,115,047 bytes |
+| mIoU | 0.671971 |
+| Boundary F1 | 0.398054 |
+| Q | 0.589796 |
+| CES | 0.000000 |
 
-## Training and analysis plots
+The file's model size and timing do not match the active 290,947-byte checkpoint and current 0.55 configuration; its CPU time also exceeds the assignment limit. Therefore, **no official current-checkpoint DUTS-TE CES is claimed in this README yet**.
 
-### Training history
+Run the benchmark with the current checkpoint/configuration before reporting the final official score:
 
-![Training history](reports/figures/v2/training_history.png)
-
-### Threshold sweep
-
-![Threshold sweep](reports/figures/v2/threshold_sweep.png)
-
-### Captured summary
-
-![Captured summary](reports/figures/v2/captured_summary.png)
-
-## Captured-image evaluation
-
-The model was evaluated on real captured examples to test robustness under practical photography conditions.
-
-- mIoU: 0.729609
-- Boundary F1: 0.396546
-- Average CPU time: 24.31 ms/image
-- CES: 0.564096
-
-### Captured comparison examples
-
-![Captured comparison 1](outputs/captured/comparisons/img1_comparison.png)
-![Captured comparison 2](outputs/captured/comparisons/img2_comparison.png)
-![Captured comparison 3](outputs/captured/comparisons/img3_comparison.png)
-
-![Captured comparison 4](outputs/captured/comparisons/img4_comparison.png)
-![Captured comparison 5](outputs/captured/comparisons/img5_comparison.png)
-![Captured comparison 6](outputs/captured/comparisons/img6_comparison.png)
-
-## Validation visualizations
-
-The following validation visual comparisons show original images, ground-truth masks, predicted masks, and overlay error maps.
-
-![Validation 1](outputs/visualizations/validation/ILSVRC2012_test_00000082_comparison.png)
-![Validation 2](outputs/visualizations/validation/ILSVRC2012_test_00000172_comparison.png)
-![Validation 3](outputs/visualizations/validation/ILSVRC2012_test_00000394_comparison.png)
-![Validation 4](outputs/visualizations/validation/ILSVRC2012_test_00000537_comparison.png)
-![Validation 5](outputs/visualizations/validation/ILSVRC2012_test_00000671_comparison.png)
-![Validation 6](outputs/visualizations/validation/ILSVRC2012_test_00000770_comparison.png)
-![Validation 7](outputs/visualizations/validation/ILSVRC2012_test_00000815_comparison.png)
-![Validation 8](outputs/visualizations/validation/ILSVRC2012_test_00001034_comparison.png)
-![Validation 9](outputs/visualizations/validation/ILSVRC2012_test_00001088_comparison.png)
-![Validation 10](outputs/visualizations/validation/ILSVRC2012_test_00002184_comparison.png)
-![Validation 11](outputs/visualizations/validation/ILSVRC2012_test_00002586_comparison.png)
-![Validation 12](outputs/visualizations/validation/ILSVRC2012_test_00002904_comparison.png)
-
-## Why this model was chosen
-
-The earlier larger FCN-style design showed promising raw accuracy, but it violated the practical project constraints because of its higher compute cost and larger footprint. The final compact model is a better tradeoff for the actual assignment objective: strong segmentation quality while remaining within the CPU and size constraints.
-
-## Limitations
-
-- Captured-image performance is noticeably lower than validation performance because real-world scenes are more variable and less controlled.
-- Boundary F1 is weaker than mIoU in some cases, which is typical for foreground segmentation tasks with thin or irregular object boundaries.
-- The model is deliberately lightweight, so it is not the highest-capacity architecture for every segmentation scenario.
-- The project prioritizes cost-efficient segmentation under the assignment constraints rather than maximum network complexity alone.
-
-## Deliverables
-
-- Final trained checkpoint: [models/final/swiftmask_u2_v2.pt](models/final/swiftmask_u2_v2.pt)
-- Final project report: [reports/final_report.md](reports/final_report.md)
-- Training and summary figures: [reports/figures/v2](reports/figures/v2)
-- Validation benchmark results: [outputs/logs/val_benchmark.json](outputs/logs/val_benchmark.json)
-- Best threshold analysis: [outputs/logs/threshold_optimization/best_threshold.json](outputs/logs/threshold_optimization/best_threshold.json)
-- Threshold comparison CSV: [outputs/logs/threshold_optimization/threshold_comparison.csv](outputs/logs/threshold_optimization/threshold_comparison.csv)
-- Captured evaluation results: [outputs/captured_evaluation/captured_results.json](outputs/captured_evaluation/captured_results.json)
-- Validation visual comparisons: [outputs/visualizations/validation](outputs/visualizations/validation)
-
-## Repository structure
-
-- [src/ces](src/ces): model, dataset loader, preprocessing, and pipeline code
-- [scripts](scripts): training, evaluation, benchmarking, and visualization utilities
-- [models](models): trained checkpoints and final model
-- [outputs](outputs): all logs, masks, predictions, and evaluation artifacts
-- [reports](reports): summary plots and final report
-- [tests](tests): unit tests and validation checks
-
-## Reproduction commands
-
-```bash
-export PYTHONPATH=src
-./.venv/bin/python scripts/train_v2.py
-./.venv/bin/python scripts/evaluate.py
-./.venv/bin/python scripts/benchmark.py
-./.venv/bin/python scripts/evaluate_captured.py
+```fish
+uv run python scripts/benchmark.py --split test
 ```
+
+Do not tune the model or threshold based on DUTS-TE results.
+
+## 8. Captured-photo evaluation
+
+The current captured evaluation uses **nine valid image/mask pairs** and the active 290,947-byte checkpoint. The aggregate results are taken from `outputs/captured_evaluation/captured_results.json`.
+
+| Metric | Result |
+|---|---:|
+| Images evaluated | 9 |
+| Foreground IoU | 0.719970 |
+| Background IoU | 0.739249 |
+| **Aggregate mIoU** | **0.729609** |
+| Mean per-image Boundary F1 | 0.396546 |
+| **Quality Q** | **0.629690** |
+| Average CPU time | 24.3081 ms/image |
+| Model size | 290,947 bytes |
+| Supplementary captured CES | 0.564096 |
+
+The captured-photo CES is supplementary; it does not replace the official DUTS-TE CES.
+
+### Per-image results
+
+| Image | mIoU | Boundary F1 | CPU ms |
+|---|---:|---:|---:|
+| img1.png | 0.614361 | 0.238286 | 26.32 |
+| img10.png | 0.750843 | 0.312956 | 26.45 |
+| img3.png | 0.890940 | 0.587340 | 26.17 |
+| img4.png | 0.543074 | 0.172663 | 22.65 |
+| img5.png | 0.949522 | 0.771009 | 21.47 |
+| img6.png | 0.382896 | 0.086616 | 21.60 |
+| img7.png | 0.911785 | 0.646296 | 24.51 |
+| img8.png | 0.877011 | 0.541496 | 27.52 |
+| img9.png | 0.596207 | 0.212255 | 22.08 |
+
+### Captured comparisons — four per row
+
+Each comparison file contains four panels: original image, ground-truth mask, prediction, and overlay. The comparisons themselves are arranged **four across per row** below. Image 2 is intentionally omitted.
+
+<table>
+  <tr>
+    <td width="25%"><img src="outputs/captured_evaluation/comparisons/img1.png" alt="Image 1 comparison" width="100%"/></td>
+    <td width="25%"><img src="outputs/captured_evaluation/comparisons/img3.png" alt="Image 3 comparison" width="100%"/></td>
+    <td width="25%"><img src="outputs/captured_evaluation/comparisons/img4.png" alt="Image 4 comparison" width="100%"/></td>
+    <td width="25%"><img src="outputs/captured_evaluation/comparisons/img5.png" alt="Image 5 comparison" width="100%"/></td>
+  </tr>
+  <tr>
+    <td width="25%"><img src="outputs/captured_evaluation/comparisons/img6.png" alt="Image 6 comparison" width="100%"/></td>
+    <td width="25%"><img src="outputs/captured_evaluation/comparisons/img7.png" alt="Image 7 comparison" width="100%"/></td>
+    <td width="25%"><img src="outputs/captured_evaluation/comparisons/img8.png" alt="Image 8 comparison" width="100%"/></td>
+    <td width="25%"><img src="outputs/captured_evaluation/comparisons/img9.png" alt="Image 9 comparison" width="100%"/></td>
+  </tr>
+  <tr>
+    <td width="25%"><img src="outputs/captured_evaluation/comparisons/img10.png" alt="Image 10 comparison" width="100%"/></td>
+    <td width="25%"></td>
+    <td width="25%"></td>
+    <td width="25%"></td>
+  </tr>
+</table>
+
+### Captured evaluation artifacts
+
+- Predictions: `outputs/captured_evaluation/predictions/`
+- Overlays: `outputs/captured_evaluation/overlays/`
+- Comparison panels: `outputs/captured_evaluation/comparisons/`
+- Aggregate JSON: `outputs/captured_evaluation/captured_results.json`
+- Per-image CSV: `outputs/captured_evaluation/per_image_results.csv`
+
+## 9. Failure analysis
+
+The captured results illustrate how scene complexity and object scale affect a compact segmentation network.
+
+- **img6.png — bird:** weakest captured example (mIoU 0.382896, Boundary F1 0.086616). The bird is relatively small against a complex outdoor background. Thin legs and fine contour details are difficult to recover after reducing the input to 128 × 128.
+- **img4.png — jalebi:** mIoU 0.543074 and Boundary F1 0.172663. The irregular, overlapping loops and ambiguous boundaries against the plate make accurate contour localization difficult.
+- **img1.png and img9.png:** Boundary F1 is 0.238286 and 0.212255 respectively. These examples show that acceptable region overlap does not necessarily imply precise boundaries.
+
+These are qualitative interpretations of the captured examples and their measured per-image results.
+
+## 10. Inference and reproduction
+
+### Environment
+
+The project uses Python 3.12 and `uv`. Training uses CUDA when available. CPU benchmarks and captured evaluation use one CPU thread.
+
+Install the environment:
+
+```fish
+uv sync
+```
+
+### Train V2
+
+Ensure the processed DUTS training and validation splits exist, then run:
+
+```fish
+uv run python scripts/train_v2.py
+```
+
+### Evaluate validation thresholds
+
+```fish
+uv run python scripts/evaluate.py
+```
+
+The threshold comparison is written to `outputs/logs/threshold_optimization/`. The selected threshold (0.55) is stored in `src/ces/config.py`.
+
+### Run the current DUTS-TE CPU benchmark
+
+```fish
+uv run python scripts/benchmark.py --split test
+```
+
+### Evaluate captured photographs
+
+Ensure each included 256 × 256 image has a corresponding binary mask with the same basename. Exclude image 2 while its crop/mask alignment remains uncertain.
+
+```fish
+uv run python scripts/evaluate_captured.py
+```
+
+### Predict one image
+
+```fish
+uv run python predict.py --image path/to/photo.jpg --out outputs/prediction.png
+```
+
+The command loads the checkpoint, saves a 256 × 256 mask PNG (0/255), and prints the required CPU-time and model-size lines.
+
+## 11. Repository structure
+
+```text
+swiftmask-ces/
+├── captured/
+│   ├── original/
+│   ├── images 256/
+│   └── masks 256/
+├── data/
+│   ├── raw/
+│   ├── processed/
+│   └── splits/
+├── models/
+│   ├── checkpoints/
+│   └── final/
+│       └── swiftmask_u2_v2.pt
+├── outputs/
+│   ├── captured_evaluation/
+│   └── logs/
+├── reports/
+│   ├── figures/
+│   └── final_report.md
+├── scripts/
+│   ├── train_v2.py
+│   ├── evaluate.py
+│   ├── benchmark.py
+│   └── evaluate_captured.py
+├── src/
+│   └── ces/
+│       ├── config.py
+│       ├── data_loader.py
+│       ├── pipeline.py
+│       ├── metrics/
+│       └── methods/track_b/
+└── predict.py
+```
+
+### Important result files
+
+- [Current configuration](src/ces/config.py)
+- [V2 model](src/ces/methods/track_b/model.py)
+- [Training script](scripts/train_v2.py)
+- [Threshold comparison](outputs/logs/threshold_optimization/threshold_comparison.json)
+- [Selected threshold](outputs/logs/threshold_optimization/best_threshold.json)
+- [Validation benchmark](outputs/logs/val_benchmark.json)
+- [Legacy DUTS-TE benchmark (not current)](outputs/logs/test_benchmark.json)
+- [Captured evaluation JSON](outputs/captured_evaluation/captured_results.json)
+- [Captured per-image metrics](outputs/captured_evaluation/per_image_results.csv)
+- [Final report](reports/final_report.md)
+
+---
 
 ## Conclusion
 
-This final compact model delivers strong segmentation quality while satisfying the assignment constraints. It is the most suitable practical solution for the project objective: maintain high CES performance without sacrificing time efficiency or model size.
+SwiftMask-CES uses a compact residual encoder–decoder with depthwise-separable convolutions and multi-scale context to target cost-efficient binary segmentation. The currently tracked model has 43,689 parameters and a 290,947-byte checkpoint. Validation threshold selection and a nine-image captured-photo evaluation are documented above. The old DUTS-TE benchmark artifact does not correspond to the current model, so the official test benchmark must be rerun before claiming a final DUTS-TE CES.
+'''
+
+path = Path('/mnt/data/README_swiftmask_ces.md')
+path.write_text(readme, encoding='utf-8')
+print(f'Created {path} | {path.stat().st_size:,} bytes | {len(readme.splitlines())} lines')
