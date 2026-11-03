@@ -7,23 +7,23 @@
     "threshold": 0.5,
     "device": "CPU",
     "cpu_threads": 1,
-    "total_cpu_seconds": 94.37032284799994,
-    "average_cpu_ms": 18.802614633990824,
-    "model_size_bytes": 474919,
-    "object_iou": 0.5081806356099671,
-    "background_iou": 0.8854581748215584,
-    "miou": 0.6968194052157628,
-    "boundary_f1": 0.4252703692267542,
-    "quality_score": 0.6153546944190602,
-    "ces_score": 0.5621059544420531,
+    "total_cpu_seconds": 335.2153000590008,
+    "average_cpu_ms": 66.78926082068156,
+    "model_size_bytes": 1115047,
+    "object_iou": 0.4801840620397874,
+    "background_iou": 0.8637575760065088,
+    "miou": 0.6719708190231481,
+    "boundary_f1": 0.39805393875645173,
+    "quality_score": 0.5897957549431392,
+    "ces_score": 0.0,
     "confusion_matrix": [
         [
-            260427328,
-            19779996
+            252351872,
+            27855452
         ],
         [
-            13908576,
-            34809284
+            11948576,
+            36769284
         ]
     ]
 }

@@ -10,6 +10,7 @@ os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 
+
 # ============================================================
 # 2. IMPORTS
 # ============================================================
@@ -24,6 +25,7 @@ from ces.config import (
     MODEL_INPUT_SIZE,
     CPU_THREADS,
     FINAL_MODEL_PATH,
+    THRESHOLD,
 )
 
 from ces.methods.track_b import SwiftMaskFCN
@@ -85,7 +87,7 @@ def load_model(model_path=FINAL_MODEL_PATH, device="cpu"):
 def predict_mask(
     image_bgr,
     model,
-    threshold=0.5,
+    threshold=None,
     input_size=None,
 ):
     """
@@ -101,12 +103,11 @@ def predict_mask(
 
     threshold:
         Sigmoid probability threshold.
+        Defaults to THRESHOLD from config.py.
 
     input_size:
         Model input resolution.
-        Use 128 for Experiment A.
-        Use 192 for Experiment B.
-        Defaults to MODEL_INPUT_SIZE if omitted.
+        Defaults to MODEL_INPUT_SIZE.
 
     Returns
     -------
@@ -146,6 +147,9 @@ def predict_mask(
             "input_size must be a positive integer."
         )
 
+    if threshold is None:
+        threshold = THRESHOLD
+
     if not 0.0 <= threshold <= 1.0:
         raise ValueError(
             "threshold must be between 0 and 1."
@@ -161,7 +165,7 @@ def predict_mask(
     )
 
     # --------------------------------------------------------
-    # 2. Resize to the selected model resolution
+    # 2. Resize to model resolution
     # --------------------------------------------------------
 
     image_rgb = cv2.resize(
@@ -192,9 +196,7 @@ def predict_mask(
         image_chw
     ).unsqueeze(0)
 
-    # Model and input must be on the same device.
     device = next(model.parameters()).device
-
     image_tensor = image_tensor.to(device)
 
     # --------------------------------------------------------
@@ -204,7 +206,7 @@ def predict_mask(
     logits = model(image_tensor)
 
     # --------------------------------------------------------
-    # 5. Binary prediction at model resolution
+    # 5. Binary prediction
     # --------------------------------------------------------
 
     prediction = (

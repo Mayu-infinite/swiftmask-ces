@@ -33,11 +33,9 @@ REPORT_DIR = ROOT_DIR / "reports"
 
 IMAGE_SIZE = 256
 
-# Selected model: Experiment A (128 x 128).
-# Input images are resized to this resolution during inference.
+# Existing V2 model input resolution.
 MODEL_INPUT_SIZE = 128
 
-# Ground-truth masks are binarized using pixel values >= 128.
 MASK_THRESHOLD = 128
 
 TRAIN_RATIO = 0.90
@@ -54,7 +52,6 @@ OUTPUT_CHANNELS = 1
 
 BASE_CHANNELS = 16
 
-# Bilinear interpolation is used for decoder upsampling.
 ALIGN_CORNERS = False
 
 
@@ -83,10 +80,10 @@ CHECKPOINT_INTERVAL = 5
 # INFERENCE CONFIGURATION
 # ============================================================
 
-# Binary prediction threshold applied after sigmoid.
-THRESHOLD = 0.50
+# Best threshold chosen from validation threshold sweep.
+# CES-optimal value on the trained compact model.
+THRESHOLD = 0.55
 
-# CPU-only inference with one thread.
 CPU_THREADS = 1
 
 WARMUP_RUNS = 1
@@ -96,6 +93,25 @@ BENCHMARK_RUNS = 20
 MAX_CPU_TIME_MS = 50.0
 
 MAX_MODEL_SIZE_BYTES = 4 * 1024 * 1024
+
+
+# ============================================================
+# THRESHOLD OPTIMIZATION
+# ============================================================
+
+THRESHOLD_CANDIDATES = (
+    0.35,
+    0.40,
+    0.45,
+    0.50,
+    0.55,
+    0.60,
+)
+
+# Previously measured V2 validation CPU latency.
+# Threshold selection does not change model computation.
+# Re-run the official CPU benchmark if the model changes.
+THRESHOLD_TUNING_CPU_MS = 20.116461
 
 
 # ============================================================
@@ -115,7 +131,6 @@ QUALITY_BOUNDARY_WEIGHT = 0.30
 # MODEL FILE
 # ============================================================
 
-# Official selected model.
 FINAL_MODEL_PATH = FINAL_MODEL_DIR / "swiftmask_u2_v2.pt"
 
 

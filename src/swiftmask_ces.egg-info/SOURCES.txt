@@ -18,6 +18,8 @@ src/ces/methods/track_b/__init__.py
 src/ces/methods/track_b/blocks.py
 src/ces/methods/track_b/losses.py
 src/ces/methods/track_b/model.py
+src/ces/methods/track_b/model_v1.py
+src/ces/methods/track_b/model_v2.py
 src/ces/metrics/__init__.py
 src/ces/metrics/boundary_f1.py
 src/ces/metrics/ces_score.py

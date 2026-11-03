@@ -1,0 +1,166 @@
+{
+    "experiment": "SwiftMask V2 threshold optimization",
+    "dataset": "DUTS validation",
+    "checkpoint": "/home/mayu/Documents/Assignments/swiftmask-ces/models/final/swiftmask_u2_v2.pt",
+    "input_resolution": 128,
+    "num_experiments": 6,
+    "cpu_time_reference_ms": 20.116461,
+    "model_size_bytes": 290947,
+    "selection_metric": "validation CES",
+    "experiments": [
+        {
+            "threshold": 0.35,
+            "num_images": 1056,
+            "object_iou": 0.8108271757294138,
+            "background_iou": 0.9199935188324972,
+            "miou": 0.8654103472809556,
+            "boundary_f1": 0.6583265457671844,
+            "quality_q": 0.8032852068268241,
+            "cpu_time_ms": 20.116461,
+            "model_size_bytes": 290947,
+            "ces": 0.7330760225099263,
+            "confusion_matrix": [
+                [
+                    47410877,
+                    2902301
+                ],
+                [
+                    1220747,
+                    17672091
+                ]
+            ]
+        },
+        {
+            "threshold": 0.4,
+            "num_images": 1056,
+            "object_iou": 0.8132673238273807,
+            "background_iou": 0.9218625794443492,
+            "miou": 0.867564951635865,
+            "boundary_f1": 0.6634060473003595,
+            "quality_q": 0.8063172803352132,
+            "cpu_time_ms": 20.116461,
+            "model_size_bytes": 290947,
+            "ces": 0.7358430850284408,
+            "confusion_matrix": [
+                [
+                    47599835,
+                    2713343
+                ],
+                [
+                    1321237,
+                    17571601
+                ]
+            ]
+        },
+        {
+            "threshold": 0.45,
+            "num_images": 1056,
+            "object_iou": 0.8148334939111891,
+            "background_iou": 0.9232833863025761,
+            "miou": 0.8690584401068826,
+            "boundary_f1": 0.6665768967805236,
+            "quality_q": 0.8083139771089749,
+            "cpu_time_ms": 20.116461,
+            "model_size_bytes": 290947,
+            "ces": 0.7376652653905685,
+            "confusion_matrix": [
+                [
+                    47769893,
+                    2543285
+                ],
+                [
+                    1425967,
+                    17466871
+                ]
+            ]
+        },
+        {
+            "threshold": 0.5,
+            "num_images": 1056,
+            "object_iou": 0.8157509992807359,
+            "background_iou": 0.9243896810112219,
+            "miou": 0.8700703401459788,
+            "boundary_f1": 0.6683040304571135,
+            "quality_q": 0.8095404472393192,
+            "cpu_time_ms": 20.116461,
+            "model_size_bytes": 290947,
+            "ces": 0.7387845388904898,
+            "confusion_matrix": [
+                [
+                    47928712,
+                    2384466
+                ],
+                [
+                    1535856,
+                    17356982
+                ]
+            ]
+        },
+        {
+            "threshold": 0.55,
+            "num_images": 1056,
+            "object_iou": 0.8159943620726692,
+            "background_iou": 0.9251995449791806,
+            "miou": 0.8705969535259248,
+            "boundary_f1": 0.6679938135095109,
+            "quality_q": 0.8098160115210006,
+            "cpu_time_ms": 20.116461,
+            "model_size_bytes": 290947,
+            "ces": 0.7390360181482228,
+            "confusion_matrix": [
+                [
+                    48080522,
+                    2232656
+                ],
+                [
+                    1654554,
+                    17238284
+                ]
+            ]
+        },
+        {
+            "threshold": 0.6,
+            "num_images": 1056,
+            "object_iou": 0.8154308710857204,
+            "background_iou": 0.9256878555735059,
+            "miou": 0.8705593633296131,
+            "boundary_f1": 0.6658216555715608,
+            "quality_q": 0.8091380510021974,
+            "cpu_time_ms": 20.116461,
+            "model_size_bytes": 290947,
+            "ces": 0.7384173131150426,
+            "confusion_matrix": [
+                [
+                    48228976,
+                    2084202
+                ],
+                [
+                    1787512,
+                    17105326
+                ]
+            ]
+        }
+    ],
+    "best_result": {
+        "threshold": 0.55,
+        "num_images": 1056,
+        "object_iou": 0.8159943620726692,
+        "background_iou": 0.9251995449791806,
+        "miou": 0.8705969535259248,
+        "boundary_f1": 0.6679938135095109,
+        "quality_q": 0.8098160115210006,
+        "cpu_time_ms": 20.116461,
+        "model_size_bytes": 290947,
+        "ces": 0.7390360181482228,
+        "confusion_matrix": [
+            [
+                48080522,
+                2232656
+            ],
+            [
+                1654554,
+                17238284
+            ]
+        ]
+    }
+}

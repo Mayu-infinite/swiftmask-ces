@@ -1,110 +1,100 @@
 {
     "dataset": "Captured Phone Photographs",
-    "num_images": 10,
+    "num_images": 9,
     "checkpoint": "/home/mayu/Documents/Assignments/swiftmask-ces/models/final/swiftmask_u2_v2.pt",
     "device": "CPU",
     "cpu_threads": 1,
-    "average_cpu_time_ms": 20.741571000000004,
-    "model_size_bytes": 474919,
-    "object_iou": 0.0,
-    "background_iou": 0.813031005859375,
-    "miou": 0.4065155029296875,
-    "boundary_f1": 0.0,
-    "quality_q": 0.28456085205078124,
-    "ces": {
-        "quality_score": 0.28456085205078124,
-        "ces_score": 0.2577298269098065
-    },
+    "average_cpu_time_ms": 24.308149222222205,
+    "model_size_bytes": 290947,
+    "object_iou": 0.7199697073842813,
+    "background_iou": 0.7392488877183145,
+    "miou": 0.729609297551298,
+    "boundary_f1": 0.3965463838327897,
+    "quality_q": 0.6296904234357454,
+    "ces": 0.564096004043017,
+    "ces_quality_score": 0.6296904234357454,
     "confusion_matrix": [
         [
-            532828,
-            122532
+            261031,
+            29091
         ],
         [
-            0,
-            0
+            62981,
+            236721
         ]
     ],
     "per_image_results": [
         {
             "image": "img1.png",
-            "object_iou": 0.0,
-            "background_iou": 0.94146728515625,
-            "miou": 0.470733642578125,
-            "boundary_f1": 0.0,
-            "cpu_time_ms": 21.62701999999994
+            "object_iou": 0.6193579766536965,
+            "background_iou": 0.6093640810621943,
+            "miou": 0.6143610288579454,
+            "boundary_f1": 0.23828647925033467,
+            "cpu_time_ms": 26.319506999999966
         },
         {
             "image": "img10.png",
-            "object_iou": 0.0,
-            "background_iou": 0.675048828125,
-            "miou": 0.3375244140625,
-            "boundary_f1": 0.0,
-            "cpu_time_ms": 23.153619000000127
-        },
-        {
-            "image": "img2.png",
-            "object_iou": 0.0,
-            "background_iou": 0.89263916015625,
-            "miou": 0.446319580078125,
-            "boundary_f1": 0.0,
-            "cpu_time_ms": 19.728521
+            "object_iou": 0.8337846366838365,
+            "background_iou": 0.6679005817028028,
+            "miou": 0.7508426091933196,
+            "boundary_f1": 0.31295592618717144,
+            "cpu_time_ms": 26.447873999999814
         },
         {
             "image": "img3.png",
-            "object_iou": 0.0,
-            "background_iou": 0.83563232421875,
-            "miou": 0.417816162109375,
-            "boundary_f1": 0.0,
-            "cpu_time_ms": 19.996325000000148
+            "object_iou": 0.8861248641468422,
+            "background_iou": 0.8957550298474464,
+            "miou": 0.8909399469971443,
+            "boundary_f1": 0.5873398223707927,
+            "cpu_time_ms": 26.167998999999888
         },
         {
             "image": "img4.png",
-            "object_iou": 0.0,
-            "background_iou": 0.71112060546875,
-            "miou": 0.355560302734375,
-            "boundary_f1": 0.0,
-            "cpu_time_ms": 18.880290999999882
+            "object_iou": 0.6615176306806263,
+            "background_iou": 0.4246304460580913,
+            "miou": 0.5430740383693589,
+            "boundary_f1": 0.17266348519662553,
+            "cpu_time_ms": 22.64949999999999
         },
         {
             "image": "img5.png",
-            "object_iou": 0.0,
-            "background_iou": 0.5784912109375,
-            "miou": 0.28924560546875,
-            "boundary_f1": 0.0,
-            "cpu_time_ms": 19.42746200000012
+            "object_iou": 0.9582402518277823,
+            "background_iou": 0.9408039152182518,
+            "miou": 0.949522083523017,
+            "boundary_f1": 0.7710092079640528,
+            "cpu_time_ms": 21.471645000000095
         },
         {
             "image": "img6.png",
-            "object_iou": 0.0,
-            "background_iou": 0.987548828125,
-            "miou": 0.4937744140625,
-            "boundary_f1": 0.0,
-            "cpu_time_ms": 19.873883000000035
+            "object_iou": 0.11509395837542938,
+            "background_iou": 0.6506986983154671,
+            "miou": 0.38289632834544823,
+            "boundary_f1": 0.08661579707156114,
+            "cpu_time_ms": 21.604801000000062
         },
         {
             "image": "img7.png",
-            "object_iou": 0.0,
-            "background_iou": 0.7879638671875,
-            "miou": 0.39398193359375,
-            "boundary_f1": 0.0,
-            "cpu_time_ms": 24.151465999999957
+            "object_iou": 0.8879576532862814,
+            "background_iou": 0.9356117346115733,
+            "miou": 0.9117846939489274,
+            "boundary_f1": 0.6462956640491635,
+            "cpu_time_ms": 24.51340400000013
         },
         {
             "image": "img8.png",
-            "object_iou": 0.0,
-            "background_iou": 0.97900390625,
-            "miou": 0.489501953125,
-            "boundary_f1": 0.0,
-            "cpu_time_ms": 19.979397999999815
+            "object_iou": 0.8524366611641426,
+            "background_iou": 0.9015844143411038,
+            "miou": 0.8770105377526232,
+            "boundary_f1": 0.5414958607819056,
+            "cpu_time_ms": 27.523120999999982
         },
         {
             "image": "img9.png",
-            "object_iou": 0.0,
-            "background_iou": 0.74139404296875,
-            "miou": 0.370697021484375,
-            "boundary_f1": 0.0,
-            "cpu_time_ms": 20.59772500000001
+            "object_iou": 0.5482734710858411,
+            "background_iou": 0.644140010487677,
+            "miou": 0.5962067407867591,
+            "boundary_f1": 0.21225521162349967,
+            "cpu_time_ms": 22.07549199999992
         }
     ]
 }

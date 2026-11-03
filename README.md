@@ -2,50 +2,75 @@
 
 ## Cost-Efficient Segmentation under a Compute Budget
 
-A lightweight foreground segmentation system developed for
-CSL7360: Computer Vision Assignment 2.
+A lightweight foreground/background segmentation system optimized for the assignment constraints: low CPU inference time, small model size, and strong quality metrics.
 
-## Approach
+## Final model
 
-Track B: Fully Convolutional Network implemented from scratch
-using PyTorch.
+- Architecture: compact U2-inspired residual segmentation model
+- Final checkpoint: [models/final/swiftmask_u2_v2.pt](models/final/swiftmask_u2_v2.pt)
+- Parameters: 43,689
+- Final threshold: 0.55
 
-The system uses:
-- Lightweight encoder-decoder architecture
-- Depthwise separable convolutions
-- Skip connections
-- Pixel-wise segmentation loss
-- CPU-optimized inference
+## Final validation results
 
-## Objectives
+Using the validation threshold sweep, the best operating threshold was 0.55.
 
-- Foreground/background binary segmentation
-- Average CPU inference time <= 50 ms
-- Small model parameter file
-- High mIoU and Boundary F1
-- Optimized Cost-Efficient Segmentation score
+- mIoU: 0.870597
+- Boundary F1: 0.667994
+- Quality Q: 0.809816
+- CES: 0.739036
 
-## Repository Structure
+## Benchmark results
 
-- `src/ces/`: Main implementation
-- `scripts/`: Training and evaluation scripts
-- `models/`: Model checkpoints and final parameters
-- `captured/`: Independently captured photographs
-- `outputs/`: Generated predictions and visualizations
-- `reports/`: Experimental results and final report
-- `tests/`: Unit tests
+Validation benchmark under single-thread CPU evaluation:
 
-## Dataset
+- Average CPU time: 21.41 ms/image
+- Model size: 290,947 bytes
+- mIoU: 0.869044
+- Boundary F1: 0.666302
+- CES: 0.733409
 
-DUTS-TR is divided into training and validation sets.
-DUTS-TE is reserved exclusively for final evaluation.
+## Captured-image evaluation
 
-Captured college/hostel photographs are used only for
-independent testing.
+- mIoU: 0.729609
+- Boundary F1: 0.396546
+- Average CPU time: 24.31 ms/image
+- CES: 0.564096
 
-## Execution
+## Deliverables included
 
-Training:
+- Final trained checkpoint: [models/final/swiftmask_u2_v2.pt](models/final/swiftmask_u2_v2.pt)
+- Final report: [reports/final_report.md](reports/final_report.md)
+- Validation threshold comparison: [outputs/logs/threshold_optimization/threshold_comparison.csv](outputs/logs/threshold_optimization/threshold_comparison.csv)
+- Best threshold JSON: [outputs/logs/threshold_optimization/best_threshold.json](outputs/logs/threshold_optimization/best_threshold.json)
+- Validation benchmark JSON: [outputs/logs/val_benchmark.json](outputs/logs/val_benchmark.json)
+- Captured evaluation JSON: [outputs/captured_evaluation/captured_results.json](outputs/captured_evaluation/captured_results.json)
+- Validation visual comparisons: [outputs/visualizations/validation](outputs/visualizations/validation)
+- Summary figures: [reports/figures/v2](reports/figures/v2)
+
+## Project structure
+
+- [src/ces](src/ces): model, dataset pipeline, evaluation utilities
+- [scripts](scripts): training, validation, benchmark, and visualization scripts
+- [models](models): checkpoints and final trained model
+- [outputs](outputs): logs, predictions, and evaluation artifacts
+- [reports](reports): final report and figures
+- [tests](tests): validation and smoke tests
+
+## Execution notes
+
+The project is configured to use the best final threshold of 0.55 as the default inference threshold.
+
+Typical commands:
 
 ```bash
-python scripts/train.py
+export PYTHONPATH=src
+./.venv/bin/python scripts/train_v2.py
+./.venv/bin/python scripts/evaluate.py
+./.venv/bin/python scripts/benchmark.py
+./.venv/bin/python scripts/evaluate_captured.py
+```
+
+## Conclusion
+
+This compact model satisfies the assignment constraints while maintaining strong segmentation quality. The earlier larger architecture was discarded because it violated the cost-efficiency requirements; the current compact model is the final, assignment-safe solution.

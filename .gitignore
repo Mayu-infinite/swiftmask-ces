@@ -29,22 +29,31 @@ data/processed/
 data/splits/
 
 # ============================================================
-# Models
+# Project assets: do not ignore them
 # ============================================================
 # Keep all trained models and checkpoints.
-# models/checkpoints/ is intentionally NOT ignored.
+!models/
+!models/**
 
-# ============================================================
-# Outputs and experiment results
-# ============================================================
 # Keep all evaluation results, logs, graphs and visualizations.
-# outputs/ is intentionally NOT ignored.
+!outputs/
+!outputs/**
 
-# ============================================================
-# Captured photographs and annotations
-# ============================================================
-# Keep original photographs, resized images and ground-truth masks.
-# captured/ is intentionally NOT ignored.
+# Keep captured photographs, masks, and original metadata.
+!captured/
+!captured/**
+
+# Keep final report and figures.
+!reports/
+!reports/**
+
+# Keep source code, tests, and project scripts tracked.
+!src/
+!src/**
+!scripts/
+!scripts/**
+!tests/
+!tests/**
 
 # ============================================================
 # Temporary files
