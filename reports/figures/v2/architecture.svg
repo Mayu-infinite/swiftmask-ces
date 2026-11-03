@@ -1,0 +1,84 @@
+<svg width="1200" height="700" viewBox="0 0 1200 700" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">SwiftMask-CES architecture</title>
+  <desc id="desc">Compact U2-inspired residual segmentation model architecture from input image to final binary mask.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#eef6ff"/>
+    </linearGradient>
+    <linearGradient id="encoder" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="decoder" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#15803d"/>
+    </linearGradient>
+    <linearGradient id="bottleneck" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#334155"/>
+    </marker>
+    <style>
+      .title { font: 700 30px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .label { font: 600 18px 'Segoe UI', Arial, sans-serif; fill: #0f172a; }
+      .small { font: 500 14px 'Segoe UI', Arial, sans-serif; fill: #334155; }
+      .box { rx: 18; ry: 18; }
+      .input { fill: #e2e8f0; stroke: #475569; stroke-width: 2; }
+      .encoder { fill: url(#encoder); stroke: #1e3a8a; stroke-width: 2; }
+      .decoder { fill: url(#decoder); stroke: #166534; stroke-width: 2; }
+      .bottle { fill: url(#bottleneck); stroke: #9a5a00; stroke-width: 2; }
+      .output { fill: #dbeafe; stroke: #1d4ed8; stroke-width: 2; }
+      .arrowline { stroke: #334155; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1200" height="700" fill="url(#bg)"/>
+
+  <text x="600" y="60" text-anchor="middle" class="title">SwiftMask-CES Architecture</text>
+
+  <rect x="90" y="120" width="150" height="110" class="box input"/>
+  <text x="165" y="170" text-anchor="middle" class="label">Input</text>
+  <text x="165" y="196" text-anchor="middle" class="small">256 × 256 RGB</text>
+
+  <line x1="240" y1="175" x2="320" y2="175" class="arrowline"/>
+
+  <rect x="320" y="100" width="170" height="150" class="box encoder"/>
+  <text x="405" y="150" text-anchor="middle" class="label" fill="#f8fafc">Stem</text>
+  <text x="405" y="176" text-anchor="middle" class="small" fill="#e0f2fe">Conv + norms</text>
+  <text x="405" y="198" text-anchor="middle" class="small" fill="#e0f2fe">Early features</text>
+
+  <line x1="490" y1="175" x2="570" y2="175" class="arrowline"/>
+
+  <rect x="570" y="90" width="210" height="170" class="box encoder"/>
+  <text x="675" y="145" text-anchor="middle" class="label" fill="#f8fafc">Encoder</text>
+  <text x="675" y="171" text-anchor="middle" class="small" fill="#e0f2fe">Residual blocks</text>
+  <text x="675" y="197" text-anchor="middle" class="small" fill="#e0f2fe">Depthwise separable convs</text>
+
+  <line x1="780" y1="175" x2="860" y2="175" class="arrowline"/>
+
+  <rect x="860" y="110" width="210" height="130" class="box bottle"/>
+  <text x="965" y="160" text-anchor="middle" class="label" fill="#fff7ed">Multi-scale</text>
+  <text x="965" y="186" text-anchor="middle" class="small" fill="#fff7ed">context bottleneck</text>
+
+  <line x1="965" y1="240" x2="965" y2="315" class="arrowline"/>
+
+  <rect x="800" y="315" width="330" height="140" class="box decoder"/>
+  <text x="965" y="360" text-anchor="middle" class="label" fill="#f0fdf4">Decoder</text>
+  <text x="965" y="386" text-anchor="middle" class="small" fill="#dcfce7">Skip connections</text>
+  <text x="965" y="412" text-anchor="middle" class="small" fill="#dcfce7">Upsampling + fusion</text>
+
+  <line x1="965" y1="455" x2="965" y2="520" class="arrowline"/>
+
+  <rect x="890" y="520" width="150" height="95" class="box output"/>
+  <text x="965" y="565" text-anchor="middle" class="label">Mask</text>
+  <text x="965" y="591" text-anchor="middle" class="small">Sigmoid / binary output</text>
+
+  <line x1="675" y1="260" x2="675" y2="500" class="arrowline"/>
+  <line x1="675" y1="500" x2="890" y2="500" class="arrowline"/>
+
+  <text x="980" y="490" class="small">Feature fusion</text>
+  <text x="150" y="290" class="small">Compact residual U2-inspired design</text>
+</svg>
