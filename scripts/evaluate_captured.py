@@ -6,7 +6,7 @@ Outputs:
     outputs/captured_evaluation/
         predictions/       Binary predicted masks (0/255)
         overlays/          Predicted foreground over original image
-        comparisons/        2x2 visual comparison images
+        comparisons/        1x4 horizontal comparison strips
         captured_results.json
         per_image_results.csv
 
@@ -253,7 +253,7 @@ def create_comparison(
     prediction,
     overlay
 ):
-    """Create a 2x2 comparison panel."""
+    """Create one horizontal row: original, ground truth, prediction, overlay."""
 
     gt_visual = cv2.cvtColor(
         ground_truth * 255,
@@ -272,10 +272,7 @@ def create_comparison(
         add_label(overlay, "Overlay: Green=Prediction, Red=GT Boundary"),
     ]
 
-    top = cv2.hconcat(panels[:2])
-    bottom = cv2.hconcat(panels[2:])
-
-    return cv2.vconcat([top, bottom])
+    return cv2.hconcat(panels)
 
 
 # ============================================================
@@ -441,7 +438,7 @@ def evaluate_captured():
         )
 
         # ----------------------------------------------------
-        # Save 2x2 comparison.
+        # Save a 1x4 horizontal comparison strip.
         # ----------------------------------------------------
 
         comparison = create_comparison(
